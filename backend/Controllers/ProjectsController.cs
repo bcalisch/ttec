@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using NetTopologySuite;
 using NetTopologySuite.Geometries;
+using NetTopologySuite.IO;
 
 namespace Backend.Api.Controllers;
 
@@ -88,8 +89,35 @@ public class ProjectsController : ControllerBase
         return Ok(project);
     }
 
+    [HttpGet("{id:guid}/boundaries")]
+    public async Task<ActionResult<IReadOnlyList<ProjectBoundaryResponse>>> GetBoundaries(Guid id, CancellationToken cancellationToken)
+    {
+        var projectExists = await _dbContext.Projects
+            .AsNoTracking()
+            .AnyAsync(x => x.Id == id, cancellationToken);
+
+        if (!projectExists)
+        {
+            return NotFound();
+        }
+
+        var boundaries = await _dbContext.ProjectBoundaries
+            .AsNoTracking()
+            .Where(x => x.ProjectId == id)
+            .ToListAsync(cancellationToken);
+
+        var writer = new GeoJsonWriter();
+        var response = boundaries.Select(b => new ProjectBoundaryResponse(
+            b.Id,
+            b.ProjectId,
+            writer.Write(b.Polygon)
+        )).ToList();
+
+        return Ok(response);
+    }
+
     [HttpPost("{id:guid}/boundaries")]
-    public async Task<ActionResult<ProjectBoundary>> CreateBoundary(Guid id, [FromBody] CreateProjectBoundaryRequest request, CancellationToken cancellationToken)
+    public async Task<ActionResult<ProjectBoundaryResponse>> CreateBoundary(Guid id, [FromBody] CreateProjectBoundaryRequest request, CancellationToken cancellationToken)
     {
         var projectExists = await _dbContext.Projects
             .AnyAsync(x => x.Id == id, cancellationToken);
@@ -114,7 +142,14 @@ public class ProjectsController : ControllerBase
         _dbContext.ProjectBoundaries.Add(boundary);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return Ok(boundary);
+        var writer = new GeoJsonWriter();
+        var response = new ProjectBoundaryResponse(
+            boundary.Id,
+            boundary.ProjectId,
+            writer.Write(boundary.Polygon)
+        );
+
+        return Ok(response);
     }
 
     [HttpGet("{id:guid}/features")]
@@ -124,6 +159,8 @@ public class ProjectsController : ControllerBase
         [FromQuery] DateTimeOffset? from,
         [FromQuery] DateTimeOffset? to,
         [FromQuery] string? types,
+        [FromQuery] Guid? testTypeId,
+        [FromQuery] string? status,
         CancellationToken cancellationToken)
     {
         var projectExists = await _dbContext.Projects
@@ -166,6 +203,16 @@ public class ProjectsController : ControllerBase
             if (bboxPolygon is not null)
             {
                 query = query.Where(x => x.Location.Intersects(bboxPolygon));
+            }
+
+            if (testTypeId is not null)
+            {
+                query = query.Where(x => x.TestTypeId == testTypeId.Value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<TestStatus>(status, ignoreCase: true, out var parsedStatus))
+            {
+                query = query.Where(x => x.Status == parsedStatus);
             }
 
             tests = await query
