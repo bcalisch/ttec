@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using Backend.Api.Data;
 using Backend.Api.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NetTopologySuite;
@@ -10,6 +11,7 @@ using NetTopologySuite.Geometries;
 namespace Backend.Api.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/projects/{projectId:guid}/export")]
 public class ExportController : ControllerBase
 {

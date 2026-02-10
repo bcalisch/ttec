@@ -1,12 +1,14 @@
 using Backend.Api.Contracts.TestTypes;
 using Backend.Api.Data;
 using Backend.Api.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace Backend.Api.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/test-types")]
 public class TestTypesController : ControllerBase
 {

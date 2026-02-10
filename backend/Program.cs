@@ -1,8 +1,11 @@
+using System.Text;
 using Backend.Api.Data;
 using Backend.Api.Services;
 using FluentValidation;
 using FluentValidation.AspNetCore;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,7 +27,33 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     });
 });
 
-builder.Services.AddScoped<ICurrentUserService, DevCurrentUserService>();
+// JWT Authentication
+var jwtSigningKey = builder.Configuration["Jwt:SigningKey"];
+if (!string.IsNullOrEmpty(jwtSigningKey))
+{
+    builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        .AddJwtBearer(options =>
+        {
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = builder.Configuration["Jwt:Issuer"],
+                ValidAudience = builder.Configuration["Jwt:Audience"],
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSigningKey))
+            };
+        });
+    builder.Services.AddAuthorization();
+
+    builder.Services.AddHttpContextAccessor();
+    builder.Services.AddScoped<ICurrentUserService, JwtCurrentUserService>();
+}
+else
+{
+    builder.Services.AddScoped<ICurrentUserService, DevCurrentUserService>();
+}
 
 builder.Services.AddCors(options =>
 {
@@ -48,6 +77,11 @@ app.UseHttpsRedirection();
 
 app.UseCors();
 
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.MapControllers();
 
 app.Run();
+
+public partial class Program { }

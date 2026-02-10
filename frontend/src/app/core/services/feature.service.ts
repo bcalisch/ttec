@@ -10,6 +10,8 @@ export interface FeatureQueryParams {
   types?: string;
   testTypeId?: string;
   status?: string;
+  page?: number;
+  pageSize?: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -24,6 +26,8 @@ export class FeatureService {
     if (params.types) httpParams = httpParams.set('types', params.types);
     if (params.testTypeId) httpParams = httpParams.set('testTypeId', params.testTypeId);
     if (params.status) httpParams = httpParams.set('status', params.status);
+    if (params.page) httpParams = httpParams.set('page', params.page.toString());
+    if (params.pageSize) httpParams = httpParams.set('pageSize', params.pageSize.toString());
 
     return this.http.get<FeaturesResponse>(`/api/projects/${projectId}/features`, { params: httpParams });
   }

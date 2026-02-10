@@ -1,11 +1,12 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TestResultFeature } from '../../core/models';
+import { AttachmentPanelComponent } from '../../shared/attachment-panel/attachment-panel.component';
 
 @Component({
   selector: 'app-feature-detail',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, AttachmentPanelComponent],
   template: `
     <div
       class="fixed top-0 right-0 h-full w-80 bg-white shadow-xl z-[1500] transform transition-transform duration-300"
@@ -42,6 +43,9 @@ import { TestResultFeature } from '../../core/models';
             <p class="text-gray-900 text-sm font-mono">
               {{ feature.latitude | number:'1.6-6' }}, {{ feature.longitude | number:'1.6-6' }}
             </p>
+          </div>
+          <div class="border-t border-gray-200 pt-4">
+            <app-attachment-panel entityType="TestResult" [entityId]="feature.id" />
           </div>
         </div>
       }

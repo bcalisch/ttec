@@ -31,5 +31,8 @@ public record SensorFeature(
 public record FeaturesResponse(
     IReadOnlyList<TestResultFeature> Tests,
     IReadOnlyList<ObservationFeature> Observations,
-    IReadOnlyList<SensorFeature> Sensors
+    IReadOnlyList<SensorFeature> Sensors,
+    int TotalTests,
+    int Page,
+    int PageSize
 );

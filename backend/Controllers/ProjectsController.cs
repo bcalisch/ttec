@@ -2,6 +2,7 @@ using Backend.Api.Contracts.Features;
 using Backend.Api.Contracts.Projects;
 using Backend.Api.Data;
 using Backend.Api.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
@@ -12,6 +13,7 @@ using NetTopologySuite.IO;
 namespace Backend.Api.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/projects")]
 public class ProjectsController : ControllerBase
 {
@@ -89,6 +91,45 @@ public class ProjectsController : ControllerBase
         return Ok(project);
     }
 
+    [HttpDelete("{id:guid}")]
+    public async Task<ActionResult> DeleteProject(Guid id, CancellationToken cancellationToken)
+    {
+        var project = await _dbContext.Projects
+            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+
+        if (project is null)
+        {
+            return NotFound();
+        }
+
+        // Remove related entities to avoid cascade path issues in SQL Server
+        var sensorIds = await _dbContext.Sensors
+            .Where(x => x.ProjectId == id)
+            .Select(x => x.Id)
+            .ToListAsync(cancellationToken);
+
+        if (sensorIds.Count > 0)
+        {
+            var readings = await _dbContext.SensorReadings
+                .Where(x => sensorIds.Contains(x.SensorId))
+                .ToListAsync(cancellationToken);
+            _dbContext.SensorReadings.RemoveRange(readings);
+        }
+
+        _dbContext.Sensors.RemoveRange(await _dbContext.Sensors.Where(x => x.ProjectId == id).ToListAsync(cancellationToken));
+        _dbContext.Observations.RemoveRange(await _dbContext.Observations.Where(x => x.ProjectId == id).ToListAsync(cancellationToken));
+        _dbContext.TestResults.RemoveRange(await _dbContext.TestResults.Where(x => x.ProjectId == id).ToListAsync(cancellationToken));
+        _dbContext.ProjectBoundaries.RemoveRange(await _dbContext.ProjectBoundaries.Where(x => x.ProjectId == id).ToListAsync(cancellationToken));
+        _dbContext.IngestBatches.RemoveRange(await _dbContext.IngestBatches.Where(x => x.ProjectId == id).ToListAsync(cancellationToken));
+        _dbContext.ProjectMemberships.RemoveRange(await _dbContext.ProjectMemberships.Where(x => x.ProjectId == id).ToListAsync(cancellationToken));
+        _dbContext.Attachments.RemoveRange(await _dbContext.Attachments.Where(x => x.EntityType == AttachmentEntityType.Project && x.EntityId == id).ToListAsync(cancellationToken));
+
+        _dbContext.Projects.Remove(project);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return NoContent();
+    }
+
     [HttpGet("{id:guid}/boundaries")]
     public async Task<ActionResult<IReadOnlyList<ProjectBoundaryResponse>>> GetBoundaries(Guid id, CancellationToken cancellationToken)
     {
@@ -152,6 +193,23 @@ public class ProjectsController : ControllerBase
         return Ok(response);
     }
 
+    [HttpDelete("{id:guid}/boundaries/{boundaryId:guid}")]
+    public async Task<ActionResult> DeleteBoundary(Guid id, Guid boundaryId, CancellationToken cancellationToken)
+    {
+        var boundary = await _dbContext.ProjectBoundaries
+            .FirstOrDefaultAsync(x => x.ProjectId == id && x.Id == boundaryId, cancellationToken);
+
+        if (boundary is null)
+        {
+            return NotFound();
+        }
+
+        _dbContext.ProjectBoundaries.Remove(boundary);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return NoContent();
+    }
+
     [HttpGet("{id:guid}/features")]
     public async Task<ActionResult<FeaturesResponse>> GetFeatures(
         Guid id,
@@ -161,7 +219,9 @@ public class ProjectsController : ControllerBase
         [FromQuery] string? types,
         [FromQuery] Guid? testTypeId,
         [FromQuery] string? status,
-        CancellationToken cancellationToken)
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 50,
+        CancellationToken cancellationToken = default)
     {
         var projectExists = await _dbContext.Projects
             .AsNoTracking()
@@ -172,6 +232,10 @@ public class ProjectsController : ControllerBase
             return NotFound();
         }
 
+        if (page < 1) page = 1;
+        if (pageSize < 1) pageSize = 1;
+        if (pageSize > 200) pageSize = 200;
+
         var typeSet = ParseTypes(types);
         var bboxPolygon = TryParseBbox(bbox, out var parsedPolygon) ? parsedPolygon : null;
 
@@ -180,7 +244,16 @@ public class ProjectsController : ControllerBase
             return BadRequest("Invalid bbox. Use 'minLon,minLat,maxLon,maxLat'.");
         }
 
+        // Load project boundary to use as spatial filter
+        var boundaryGeometry = await _dbContext.ProjectBoundaries
+            .AsNoTracking()
+            .Where(x => x.ProjectId == id)
+            .OrderByDescending(x => x.Id)
+            .Select(x => x.Polygon)
+            .FirstOrDefaultAsync(cancellationToken);
+
         var tests = new List<TestResultFeature>();
+        var totalTests = 0;
         var observations = new List<ObservationFeature>();
         var sensors = new List<SensorFeature>();
 
@@ -189,6 +262,11 @@ public class ProjectsController : ControllerBase
             var query = _dbContext.TestResults
                 .AsNoTracking()
                 .Where(x => x.ProjectId == id);
+
+            if (boundaryGeometry is not null)
+            {
+                query = query.Where(x => x.Location.Within(boundaryGeometry));
+            }
 
             if (from is not null)
             {
@@ -210,13 +288,25 @@ public class ProjectsController : ControllerBase
                 query = query.Where(x => x.TestTypeId == testTypeId.Value);
             }
 
-            if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<TestStatus>(status, ignoreCase: true, out var parsedStatus))
+            if (!string.IsNullOrWhiteSpace(status))
             {
-                query = query.Where(x => x.Status == parsedStatus);
+                var statusValues = status.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+                    .Select(s => Enum.TryParse<TestStatus>(s, ignoreCase: true, out var v) ? v : (TestStatus?)null)
+                    .Where(v => v != null)
+                    .Select(v => v!.Value)
+                    .ToList();
+                if (statusValues.Count > 0)
+                {
+                    query = query.Where(x => statusValues.Contains(x.Status));
+                }
             }
+
+            totalTests = await query.CountAsync(cancellationToken);
 
             tests = await query
                 .OrderByDescending(x => x.Timestamp)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .Select(x => new TestResultFeature(
                     x.Id,
                     x.TestTypeId,
@@ -235,6 +325,11 @@ public class ProjectsController : ControllerBase
             var query = _dbContext.Observations
                 .AsNoTracking()
                 .Where(x => x.ProjectId == id);
+
+            if (boundaryGeometry is not null)
+            {
+                query = query.Where(x => x.Location.Within(boundaryGeometry));
+            }
 
             if (from is not null)
             {
@@ -269,6 +364,11 @@ public class ProjectsController : ControllerBase
                 .AsNoTracking()
                 .Where(x => x.ProjectId == id);
 
+            if (boundaryGeometry is not null)
+            {
+                query = query.Where(x => x.Location.Within(boundaryGeometry));
+            }
+
             if (bboxPolygon is not null)
             {
                 query = query.Where(x => x.Location.Intersects(bboxPolygon));
@@ -284,7 +384,7 @@ public class ProjectsController : ControllerBase
                 .ToListAsync(cancellationToken);
         }
 
-        var response = new FeaturesResponse(tests, observations, sensors);
+        var response = new FeaturesResponse(tests, observations, sensors, totalTests, page, pageSize);
         return Ok(response);
     }
 

@@ -30,4 +30,12 @@ export class ProjectService {
   createBoundary(id: string, geoJson: string): Observable<ProjectBoundary> {
     return this.http.post<ProjectBoundary>(`/api/projects/${id}/boundaries`, { geoJson });
   }
+
+  deleteBoundary(projectId: string, boundaryId: string): Observable<void> {
+    return this.http.delete<void>(`/api/projects/${projectId}/boundaries/${boundaryId}`);
+  }
+
+  delete(id: string): Observable<void> {
+    return this.http.delete<void>(`/api/projects/${id}`);
+  }
 }

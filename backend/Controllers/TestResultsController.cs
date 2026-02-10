@@ -1,6 +1,7 @@
 using Backend.Api.Contracts.TestResults;
 using Backend.Api.Data;
 using Backend.Api.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NetTopologySuite;
@@ -9,6 +10,7 @@ using NetTopologySuite.Geometries;
 namespace Backend.Api.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/projects/{projectId:guid}")]
 public class TestResultsController : ControllerBase
 {
@@ -59,7 +61,20 @@ public class TestResultsController : ControllerBase
         _dbContext.TestResults.Add(testResult);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return Ok(testResult);
+        var response = new TestResultResponse(
+            testResult.Id,
+            testResult.ProjectId,
+            testResult.TestTypeId,
+            testResult.Timestamp,
+            testResult.Value,
+            testResult.Status.ToString(),
+            testResult.Location.X,
+            testResult.Location.Y,
+            testResult.Source,
+            testResult.Technician
+        );
+
+        return Ok(response);
     }
 
     [HttpPost("ingest/test-results")]

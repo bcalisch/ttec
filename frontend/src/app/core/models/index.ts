@@ -66,6 +66,9 @@ export interface FeaturesResponse {
   tests: TestResultFeature[];
   observations: ObservationFeature[];
   sensors: SensorFeature[];
+  totalTests: number;
+  page: number;
+  pageSize: number;
 }
 
 export interface OutOfSpecItem {
@@ -116,4 +119,19 @@ export interface CreateTestResultRequest {
 export interface BatchIngestRequest {
   idempotencyKey: string;
   items: CreateTestResultRequest[];
+}
+
+export interface CreateObservationRequest {
+  latitude: number;
+  longitude: number;
+  note: string;
+  tags?: string;
+  timestamp: string;
+}
+
+export interface CreateSensorRequest {
+  latitude: number;
+  longitude: number;
+  type: string;
+  metadataJson?: string;
 }

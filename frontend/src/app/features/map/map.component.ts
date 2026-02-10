@@ -6,11 +6,11 @@ import {
 import { CommonModule } from '@angular/common';
 import * as L from 'leaflet';
 import 'leaflet.markercluster';
-import 'leaflet-draw';
 import {
   TestResultFeature, ObservationFeature, SensorFeature, CoverageCell
 } from '../../core/models';
 import { ProjectService } from '../../core/services/project.service';
+import { ToastService } from '../../core/services/toast.service';
 
 // Fix Leaflet default icon path issue
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -40,12 +40,29 @@ L.Icon.Default.mergeOptions({
             Import GeoJSON
             <input type="file" accept=".geojson,.json" (change)="onGeoJsonImport($event)" class="hidden" />
           </label>
+          @if (boundary && boundaryId) {
+            <button
+              (click)="clearBoundary()"
+              class="px-3 py-1.5 text-xs bg-red-500 text-white rounded shadow hover:bg-red-600">
+              Clear Boundary
+            </button>
+          }
         } @else {
+          @if (drawPoints.length >= 3) {
+            <button
+              (click)="finishDraw()"
+              class="px-3 py-1.5 text-xs bg-green-600 text-white rounded shadow hover:bg-green-700">
+              Finish ({{ drawPoints.length }} points)
+            </button>
+          }
           <button
             (click)="cancelDraw()"
             class="px-3 py-1.5 text-xs bg-red-500 text-white rounded shadow hover:bg-red-600">
             Cancel Draw
           </button>
+          <div class="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded shadow text-gray-600">
+            Click map to add points. {{ drawPoints.length < 3 ? 'Need ' + (3 - drawPoints.length) + ' more.' : 'Click Finish when done.' }}
+          </div>
         }
       </div>
       @if (contextMenuVisible) {
@@ -57,6 +74,16 @@ L.Icon.Default.mergeOptions({
             (click)="onContextMenuAddTest()"
             class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 flex items-center gap-2">
             <span class="text-base">+</span> Add New Test
+          </button>
+          <button
+            (click)="onContextMenuAddObservation()"
+            class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 flex items-center gap-2">
+            <span class="text-base">+</span> Add Observation
+          </button>
+          <button
+            (click)="onContextMenuAddSensor()"
+            class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 flex items-center gap-2">
+            <span class="text-base">+</span> Add Sensor
           </button>
         </div>
       }
@@ -78,11 +105,15 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
   @Input() sensors: SensorFeature[] = [];
   @Input() boundary = '';
   @Input() projectId = '';
+  @Input() boundaryId = '';
   @Input() coverageCells: CoverageCell[] = [];
 
   @Output() boundsChanged = new EventEmitter<string>();
   @Output() featureSelected = new EventEmitter<TestResultFeature>();
   @Output() addTestRequested = new EventEmitter<{latitude: number, longitude: number}>();
+  @Output() observationRequested = new EventEmitter<{latitude: number, longitude: number}>();
+  @Output() sensorRequested = new EventEmitter<{latitude: number, longitude: number}>();
+  @Output() boundaryChanged = new EventEmitter<string>();
 
   contextMenuVisible = false;
   contextMenuX = 0;
@@ -96,11 +127,20 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
   private boundaryLayer!: L.LayerGroup;
   private coverageLayer!: L.LayerGroup;
   private boundsTimer: ReturnType<typeof setTimeout> | null = null;
-  drawingMode = false;
-  private drawHandler: any = null;
   private initialized = false;
 
-  constructor(private projectService: ProjectService, private cdr: ChangeDetectorRef) {}
+  // Custom polygon drawing state (replaces broken leaflet-draw)
+  drawingMode = false;
+  drawPoints: L.LatLng[] = [];
+  private drawMarkers: L.CircleMarker[] = [];
+  private drawPolyline: L.Polyline | null = null;
+  private drawClickHandler: ((e: L.LeafletMouseEvent) => void) | null = null;
+
+  constructor(
+    private projectService: ProjectService,
+    private toastService: ToastService,
+    private cdr: ChangeDetectorRef
+  ) {}
 
   ngOnInit(): void {}
 
@@ -157,6 +197,7 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
     });
 
     this.map.on('contextmenu', (e: L.LeafletMouseEvent) => {
+      if (this.drawingMode) return;
       e.originalEvent.preventDefault();
       this.contextMenuLatLng = e.latlng;
       this.contextMenuX = e.originalEvent.offsetX;
@@ -167,30 +208,15 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
 
     // Close context menu on regular click or map move
     this.map.on('click', () => {
-      this.contextMenuVisible = false;
-      this.cdr.markForCheck();
+      if (this.contextMenuVisible) {
+        this.contextMenuVisible = false;
+        this.cdr.markForCheck();
+      }
     });
     this.map.on('movestart', () => {
-      this.contextMenuVisible = false;
-      this.cdr.markForCheck();
-    });
-
-    // Handle draw:created event
-    this.map.on('draw:created' as any, (e: any) => {
-      const layer = e.layer;
-      const geoJson = JSON.stringify(layer.toGeoJSON().geometry);
-      this.drawingMode = false;
-      if (this.drawHandler) {
-        this.drawHandler.disable();
-        this.drawHandler = null;
-      }
-      if (this.projectId) {
-        this.projectService.createBoundary(this.projectId, geoJson).subscribe({
-          next: (boundary) => {
-            this.boundary = boundary.geoJson;
-            this.updateBoundary();
-          }
-        });
+      if (this.contextMenuVisible) {
+        this.contextMenuVisible = false;
+        this.cdr.markForCheck();
       }
     });
   }
@@ -322,27 +348,150 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
     this.contextMenuVisible = false;
   }
 
-  startDrawBoundary(): void {
-    this.drawingMode = true;
-    this.drawHandler = new (L.Draw as any).Polygon(this.map, {
-      allowIntersection: false,
-      showArea: true,
-      shapeOptions: {
-        color: '#3b82f6',
-        weight: 2,
-        fillColor: '#3b82f6',
-        fillOpacity: 0.1
+  onContextMenuAddObservation(): void {
+    if (this.contextMenuLatLng) {
+      this.observationRequested.emit({
+        latitude: this.contextMenuLatLng.lat,
+        longitude: this.contextMenuLatLng.lng
+      });
+    }
+    this.contextMenuVisible = false;
+  }
+
+  onContextMenuAddSensor(): void {
+    if (this.contextMenuLatLng) {
+      this.sensorRequested.emit({
+        latitude: this.contextMenuLatLng.lat,
+        longitude: this.contextMenuLatLng.lng
+      });
+    }
+    this.contextMenuVisible = false;
+  }
+
+  clearBoundary(): void {
+    if (!this.projectId || !this.boundaryId) return;
+    if (!confirm('Remove the project boundary?')) return;
+    this.projectService.deleteBoundary(this.projectId, this.boundaryId).subscribe({
+      next: () => {
+        this.boundary = '';
+        this.boundaryId = '';
+        this.boundaryLayer.clearLayers();
+        this.boundaryChanged.emit('');
+        this.toastService.success('Boundary removed');
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.toastService.error('Failed to remove boundary');
       }
     });
-    this.drawHandler.enable();
+  }
+
+  // --- Custom polygon drawing (no leaflet-draw dependency) ---
+
+  startDrawBoundary(): void {
+    this.drawingMode = true;
+    this.drawPoints = [];
+    this.drawMarkers = [];
+    this.drawPolyline = null;
+
+    this.drawClickHandler = (e: L.LeafletMouseEvent) => {
+      this.addDrawPoint(e.latlng);
+    };
+    this.map.on('click', this.drawClickHandler);
+    this.cdr.markForCheck();
+  }
+
+  private addDrawPoint(latlng: L.LatLng): void {
+    this.drawPoints.push(latlng);
+
+    // Add vertex marker
+    const marker = L.circleMarker(latlng, {
+      radius: 6,
+      fillColor: '#3b82f6',
+      color: '#fff',
+      weight: 2,
+      fillOpacity: 1
+    }).addTo(this.map);
+    this.drawMarkers.push(marker);
+
+    // Update polyline preview
+    if (this.drawPolyline) {
+      this.map.removeLayer(this.drawPolyline);
+    }
+    if (this.drawPoints.length >= 2) {
+      // Show closed preview when 3+ points
+      const coords = this.drawPoints.length >= 3
+        ? [...this.drawPoints, this.drawPoints[0]]
+        : this.drawPoints;
+      this.drawPolyline = L.polyline(coords, {
+        color: '#3b82f6',
+        weight: 2,
+        dashArray: '6, 4'
+      }).addTo(this.map);
+    }
+
+    this.cdr.markForCheck();
+  }
+
+  finishDraw(): void {
+    if (this.drawPoints.length < 3) return;
+
+    // Build GeoJSON Polygon
+    const coords = this.drawPoints.map(p => [p.lng, p.lat]);
+    coords.push(coords[0]); // close the ring
+    const geoJson = JSON.stringify({
+      type: 'Polygon',
+      coordinates: [coords]
+    });
+
+    this.cleanupDraw();
+
+    // Clear old boundary immediately so user sees the change
+    this.boundaryLayer.clearLayers();
+
+    if (this.projectId) {
+      this.projectService.createBoundary(this.projectId, geoJson).subscribe({
+        next: (boundary) => {
+          this.boundary = boundary.geoJson;
+          this.updateBoundary();
+          this.boundaryChanged.emit(boundary.geoJson);
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          // Restore old boundary if save failed
+          this.updateBoundary();
+          this.cdr.markForCheck();
+        }
+      });
+    }
   }
 
   cancelDraw(): void {
+    this.cleanupDraw();
+  }
+
+  private cleanupDraw(): void {
     this.drawingMode = false;
-    if (this.drawHandler) {
-      this.drawHandler.disable();
-      this.drawHandler = null;
+    this.drawPoints = [];
+
+    // Remove click handler
+    if (this.drawClickHandler) {
+      this.map.off('click', this.drawClickHandler);
+      this.drawClickHandler = null;
     }
+
+    // Remove preview markers and polyline
+    for (const m of this.drawMarkers) {
+      this.map.removeLayer(m);
+    }
+    this.drawMarkers = [];
+
+    if (this.drawPolyline) {
+      this.map.removeLayer(this.drawPolyline);
+      this.drawPolyline = null;
+    }
+
+    this.cdr.markForCheck();
   }
 
   onGeoJsonImport(event: Event): void {
