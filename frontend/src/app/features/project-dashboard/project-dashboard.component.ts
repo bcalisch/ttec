@@ -15,6 +15,7 @@ import { DataTableComponent } from '../data-table/data-table.component';
 import { FeatureDetailComponent } from '../feature-detail/feature-detail.component';
 import { AnalyticsComponent } from '../analytics/analytics.component';
 import { CsvUploadComponent } from '../csv-upload/csv-upload.component';
+import { AddTestFormComponent } from '../add-test-form/add-test-form.component';
 
 @Component({
   selector: 'app-project-dashboard',
@@ -22,7 +23,7 @@ import { CsvUploadComponent } from '../csv-upload/csv-upload.component';
   imports: [
     CommonModule, MapComponent, FilterPanelComponent,
     DataTableComponent, FeatureDetailComponent,
-    AnalyticsComponent, CsvUploadComponent
+    AnalyticsComponent, CsvUploadComponent, AddTestFormComponent
   ],
   template: `
     <div class="h-full flex flex-col">
@@ -52,7 +53,8 @@ import { CsvUploadComponent } from '../csv-upload/csv-upload.component';
             [projectId]="project.id"
             [coverageCells]="[]"
             (boundsChanged)="onBoundsChanged($event)"
-            (featureSelected)="onFeatureSelected($event)" />
+            (featureSelected)="onFeatureSelected($event)"
+            (addTestRequested)="onAddTestRequested($event)" />
           @if (loading) {
             <div class="absolute top-4 right-4 bg-white rounded-full shadow px-3 py-1.5 flex items-center gap-2 z-[1000]">
               <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
@@ -99,6 +101,15 @@ import { CsvUploadComponent } from '../csv-upload/csv-upload.component';
             (closed)="showCsvUpload = false; fetchFeatures()"
             (uploaded)="showCsvUpload = false; fetchFeatures()" />
         }
+
+        @if (showAddTest) {
+          <app-add-test-form
+            [projectId]="project.id"
+            [latitude]="addTestLat"
+            [longitude]="addTestLng"
+            (closed)="showAddTest = false"
+            (saved)="showAddTest = false; fetchFeatures()" />
+        }
       } @else if (loading) {
         <div class="flex justify-center items-center h-64">
           <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -117,6 +128,9 @@ export class ProjectDashboardComponent implements OnInit, OnDestroy {
   activeTab: 'table' | 'analytics' = 'table';
   selectedFeature: TestResultFeature | null = null;
   showCsvUpload = false;
+  showAddTest = false;
+  addTestLat = 0;
+  addTestLng = 0;
 
   private currentBbox = '';
   private currentFilters: Record<string, string> = {};
@@ -177,6 +191,12 @@ export class ProjectDashboardComponent implements OnInit, OnDestroy {
 
   onFeatureSelected(feature: TestResultFeature): void {
     this.selectedFeature = feature;
+  }
+
+  onAddTestRequested(location: {latitude: number, longitude: number}): void {
+    this.addTestLat = location.latitude;
+    this.addTestLng = location.longitude;
+    this.showAddTest = true;
   }
 
   fetchFeatures(): void {

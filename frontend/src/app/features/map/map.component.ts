@@ -1,7 +1,7 @@
 import {
   Component, Input, Output, EventEmitter,
   OnInit, OnDestroy, OnChanges, SimpleChanges,
-  ChangeDetectionStrategy, ElementRef, ViewChild, AfterViewInit
+  ChangeDetectionStrategy, ChangeDetectorRef, ElementRef, ViewChild, AfterViewInit
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import * as L from 'leaflet';
@@ -48,6 +48,18 @@ L.Icon.Default.mergeOptions({
           </button>
         }
       </div>
+      @if (contextMenuVisible) {
+        <div
+          class="absolute z-[1100] bg-white rounded-lg shadow-lg border border-gray-200 py-1 min-w-[160px]"
+          [style.left.px]="contextMenuX"
+          [style.top.px]="contextMenuY">
+          <button
+            (click)="onContextMenuAddTest()"
+            class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 flex items-center gap-2">
+            <span class="text-base">+</span> Add New Test
+          </button>
+        </div>
+      }
     </div>
   `,
   styles: [`
@@ -70,6 +82,12 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
 
   @Output() boundsChanged = new EventEmitter<string>();
   @Output() featureSelected = new EventEmitter<TestResultFeature>();
+  @Output() addTestRequested = new EventEmitter<{latitude: number, longitude: number}>();
+
+  contextMenuVisible = false;
+  contextMenuX = 0;
+  contextMenuY = 0;
+  private contextMenuLatLng: L.LatLng | null = null;
 
   private map!: L.Map;
   private markerCluster!: L.MarkerClusterGroup;
@@ -79,10 +97,10 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
   private coverageLayer!: L.LayerGroup;
   private boundsTimer: ReturnType<typeof setTimeout> | null = null;
   drawingMode = false;
-  private drawControl: L.Control.Draw | null = null;
+  private drawHandler: any = null;
   private initialized = false;
 
-  constructor(private projectService: ProjectService) {}
+  constructor(private projectService: ProjectService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit(): void {}
 
@@ -138,14 +156,33 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
       }, 300);
     });
 
+    this.map.on('contextmenu', (e: L.LeafletMouseEvent) => {
+      e.originalEvent.preventDefault();
+      this.contextMenuLatLng = e.latlng;
+      this.contextMenuX = e.originalEvent.offsetX;
+      this.contextMenuY = e.originalEvent.offsetY;
+      this.contextMenuVisible = true;
+      this.cdr.markForCheck();
+    });
+
+    // Close context menu on regular click or map move
+    this.map.on('click', () => {
+      this.contextMenuVisible = false;
+      this.cdr.markForCheck();
+    });
+    this.map.on('movestart', () => {
+      this.contextMenuVisible = false;
+      this.cdr.markForCheck();
+    });
+
     // Handle draw:created event
     this.map.on('draw:created' as any, (e: any) => {
       const layer = e.layer;
       const geoJson = JSON.stringify(layer.toGeoJSON().geometry);
       this.drawingMode = false;
-      if (this.drawControl) {
-        this.map.removeControl(this.drawControl);
-        this.drawControl = null;
+      if (this.drawHandler) {
+        this.drawHandler.disable();
+        this.drawHandler = null;
       }
       if (this.projectId) {
         this.projectService.createBoundary(this.projectId, geoJson).subscribe({
@@ -275,38 +312,36 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
     }
   }
 
+  onContextMenuAddTest(): void {
+    if (this.contextMenuLatLng) {
+      this.addTestRequested.emit({
+        latitude: this.contextMenuLatLng.lat,
+        longitude: this.contextMenuLatLng.lng
+      });
+    }
+    this.contextMenuVisible = false;
+  }
+
   startDrawBoundary(): void {
     this.drawingMode = true;
-    const drawLayer = new L.FeatureGroup();
-    this.map.addLayer(drawLayer);
-
-    this.drawControl = new L.Control.Draw({
-      draw: {
-        polygon: {
-          allowIntersection: false,
-          showArea: true
-        } as any,
-        polyline: false,
-        circle: false,
-        rectangle: false,
-        marker: false,
-        circlemarker: false
-      },
-      edit: {
-        featureGroup: drawLayer
+    this.drawHandler = new (L.Draw as any).Polygon(this.map, {
+      allowIntersection: false,
+      showArea: true,
+      shapeOptions: {
+        color: '#3b82f6',
+        weight: 2,
+        fillColor: '#3b82f6',
+        fillOpacity: 0.1
       }
     });
-    this.map.addControl(this.drawControl);
-
-    // Activate draw polygon mode programmatically
-    (new (L.Draw as any).Polygon(this.map, (this.drawControl as any).options.draw.polygon)).enable();
+    this.drawHandler.enable();
   }
 
   cancelDraw(): void {
     this.drawingMode = false;
-    if (this.drawControl) {
-      this.map.removeControl(this.drawControl);
-      this.drawControl = null;
+    if (this.drawHandler) {
+      this.drawHandler.disable();
+      this.drawHandler = null;
     }
   }
 
