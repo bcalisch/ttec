@@ -8,9 +8,10 @@ import { ProjectService } from '../../core/services/project.service';
 import { FeatureService, FeatureQueryParams } from '../../core/services/feature.service';
 import {
   Project, ProjectBoundary, TestResultFeature,
-  ObservationFeature, SensorFeature, ProjectStatus
+  ObservationFeature, SensorFeature, ProjectStatus, CoverageCell
 } from '../../core/models';
 import { ToastService } from '../../core/services/toast.service';
+import { AnalyticsService } from '../../core/services/analytics.service';
 import { MapComponent } from '../map/map.component';
 import { FilterPanelComponent } from '../filter-panel/filter-panel.component';
 import { DataTableComponent } from '../data-table/data-table.component';
@@ -50,6 +51,11 @@ import { AddSensorFormComponent } from '../add-sensor-form/add-sensor-form.compo
               Delete
             </button>
             <button
+              (click)="toggleCoverageGrid()"
+              [class]="showCoverageGrid ? 'px-3 py-1.5 text-sm bg-green-600 text-white rounded-md hover:bg-green-700' : 'px-3 py-1.5 text-sm border border-gray-300 rounded-md hover:bg-gray-50'">
+              {{ showCoverageGrid ? 'Hide Coverage' : 'Show Coverage' }}
+            </button>
+            <button
               (click)="showCsvUpload = true"
               class="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700">
               Upload CSV
@@ -70,7 +76,7 @@ import { AddSensorFormComponent } from '../add-sensor-form/add-sensor-form.compo
             [boundary]="boundaryGeoJson"
             [boundaryId]="boundaryId"
             [projectId]="project.id"
-            [coverageCells]="[]"
+            [coverageCells]="showCoverageGrid ? coverageCells : []"
             (boundsChanged)="onBoundsChanged($event)"
             (featureSelected)="onFeatureSelected($event)"
             (addTestRequested)="onAddTestRequested($event)"
@@ -118,7 +124,7 @@ import { AddSensorFormComponent } from '../add-sensor-form/add-sensor-form.compo
                 (rowSelected)="onFeatureSelected($event)"
                 (pageChanged)="onPageChanged($event)" />
             } @else {
-              <app-analytics [projectId]="project.id" />
+              <app-analytics [projectId]="project.id" (locateOnMap)="onLocateOnMap($event)" />
             }
           </div>
         </div>
@@ -222,6 +228,7 @@ import { AddSensorFormComponent } from '../add-sensor-form/add-sensor-form.compo
 })
 export class ProjectDashboardComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild('mapArea') mapArea!: ElementRef;
+  @ViewChild(MapComponent) mapComponent!: MapComponent;
 
   project: Project | null = null;
   testResults: TestResultFeature[] = [];
@@ -232,6 +239,8 @@ export class ProjectDashboardComponent implements OnInit, OnDestroy, AfterViewIn
   loading = false;
   activeTab: 'table' | 'analytics' = 'table';
   selectedFeature: TestResultFeature | null = null;
+  coverageCells: CoverageCell[] = [];
+  showCoverageGrid = false;
   showCsvUpload = false;
   showAddTest = false;
   showAddObservation = false;
@@ -264,7 +273,8 @@ export class ProjectDashboardComponent implements OnInit, OnDestroy, AfterViewIn
     private router: Router,
     private projectService: ProjectService,
     private featureService: FeatureService,
-    private toastService: ToastService
+    private toastService: ToastService,
+    private analyticsService: AnalyticsService
   ) {}
 
   ngOnInit(): void {
@@ -449,6 +459,28 @@ export class ProjectDashboardComponent implements OnInit, OnDestroy, AfterViewIn
       // Reload boundaries to get the new ID
       this.loadBoundaries(this.project.id);
     }
+  }
+
+  onLocateOnMap(loc: {latitude: number, longitude: number}): void {
+    this.mapComponent?.fitBoundsToPoint(loc.latitude, loc.longitude);
+  }
+
+  toggleCoverageGrid(): void {
+    this.showCoverageGrid = !this.showCoverageGrid;
+    if (this.showCoverageGrid && this.coverageCells.length === 0 && this.project) {
+      this.loadCoverage(this.project.id);
+    }
+  }
+
+  loadCoverage(projectId: string): void {
+    this.analyticsService.getCoverage(projectId).subscribe({
+      next: (response) => {
+        this.coverageCells = response.cells;
+      },
+      error: () => {
+        this.toastService.error('Failed to load coverage data');
+      }
+    });
   }
 
   fetchFeatures(): void {

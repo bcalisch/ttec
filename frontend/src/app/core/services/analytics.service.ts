@@ -11,8 +11,8 @@ export class AnalyticsService {
     return this.http.get<OutOfSpecItem[]>(`/api/projects/${projectId}/analytics/out-of-spec`);
   }
 
-  getCoverage(projectId: string): Observable<CoverageCell[]> {
-    return this.http.get<CoverageCell[]>(`/api/projects/${projectId}/analytics/coverage`);
+  getCoverage(projectId: string): Observable<{gridSize: number, cells: CoverageCell[], gaps: number}> {
+    return this.http.get<{gridSize: number, cells: CoverageCell[], gaps: number}>(`/api/projects/${projectId}/analytics/coverage`);
   }
 
   getTrends(projectId: string, interval: 'day' | 'week' = 'day'): Observable<TrendPoint[]> {

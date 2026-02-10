@@ -264,6 +264,70 @@ az containerapp update \
     AzureBlobStorage__ContainerName="uploads"
 ```
 
+### 8. Key Vault for Secrets
+
+Store sensitive configuration in Azure Key Vault instead of environment variables:
+
+```bash
+# Create Key Vault
+az keyvault create \
+  --name geoops-vault \
+  --resource-group rg-geoops \
+  --location eastus
+
+# Store secrets
+az keyvault secret set --vault-name geoops-vault --name "SqlConnectionString" \
+  --value "Server=tcp:geoops-sql-server.database.windows.net,1433;Database=GeoOps;User Id=sqladmin;Password=<StrongPassword>;Encrypt=true;TrustServerCertificate=false;"
+az keyvault secret set --vault-name geoops-vault --name "JwtSigningKey" \
+  --value "<your-jwt-signing-key>"
+
+# Enable managed identity on the API container app
+az containerapp identity assign \
+  --name geoops-api \
+  --resource-group rg-geoops \
+  --system-assigned
+
+# Get the managed identity principal ID
+PRINCIPAL_ID=$(az containerapp identity show \
+  --name geoops-api \
+  --resource-group rg-geoops \
+  --query principalId -o tsv)
+
+# Grant Key Vault access to the managed identity
+az keyvault set-policy \
+  --name geoops-vault \
+  --object-id $PRINCIPAL_ID \
+  --secret-permissions get list
+```
+
+Then reference secrets in container app environment variables using Key Vault references:
+
+```bash
+az containerapp update \
+  --name geoops-api \
+  --resource-group rg-geoops \
+  --set-env-vars \
+    ConnectionStrings__Default=secretref:sql-connection-string \
+  --secrets sql-connection-string=keyvaultref:https://geoops-vault.vault.azure.net/secrets/SqlConnectionString,identityref:system
+```
+
+### 9. Database Migrations
+
+The backend auto-applies EF migrations on startup in Development mode. For production deployments, run migrations explicitly before deploying:
+
+```bash
+# From the project root, apply migrations against Azure SQL
+cd backend
+dotnet ef database update \
+  --connection "Server=tcp:geoops-sql-server.database.windows.net,1433;Database=GeoOps;User Id=sqladmin;Password=<StrongPassword>;Encrypt=true;TrustServerCertificate=false;"
+```
+
+To create a new migration after model changes:
+
+```bash
+dotnet ef migrations add <MigrationName>
+```
+
 ## CI/CD with GitHub Actions
 
 Extend the existing CI workflow to build, push, and deploy on merge to main:

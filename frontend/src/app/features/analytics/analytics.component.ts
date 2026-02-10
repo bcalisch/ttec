@@ -1,5 +1,5 @@
 import {
-  Component, Input, OnInit, OnChanges, SimpleChanges,
+  Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges,
   ViewChild, ElementRef, AfterViewInit
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -53,6 +53,7 @@ Chart.register(...registerables);
               <tbody>
                 @for (item of outOfSpecItems; track item.id; let odd = $odd) {
                   <tr
+                    (click)="onLocate(item)"
                     [class]="severityRowClass(item.severity, odd)"
                     class="cursor-pointer hover:bg-blue-50">
                     <td class="px-3 py-1.5 font-medium">{{ item.testTypeName }}</td>
@@ -104,6 +105,7 @@ Chart.register(...registerables);
 })
 export class AnalyticsComponent implements OnInit, OnChanges, AfterViewInit {
   @Input() projectId = '';
+  @Output() locateOnMap = new EventEmitter<{latitude: number, longitude: number}>();
   @ViewChild('trendCanvas') trendCanvas!: ElementRef<HTMLCanvasElement>;
 
   outOfSpecItems: OutOfSpecItem[] = [];
@@ -231,6 +233,10 @@ export class AnalyticsComponent implements OnInit, OnChanges, AfterViewInit {
 
   exportGeoJson(): void {
     this.exportService.exportGeoJson(this.projectId);
+  }
+
+  onLocate(item: OutOfSpecItem): void {
+    this.locateOnMap.emit({latitude: item.latitude, longitude: item.longitude});
   }
 
   severityLabel(severity: number): string {

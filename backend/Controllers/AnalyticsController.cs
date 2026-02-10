@@ -39,36 +39,40 @@ public class AnalyticsController : ControllerBase
             .Select(r =>
             {
                 decimal severityPercent = 0;
-                if (r.TestType.MinThreshold is not null && r.Value < r.TestType.MinThreshold)
+                decimal threshold = 0;
+                bool breachedMin = r.TestType.MinThreshold is not null && r.Value < r.TestType.MinThreshold;
+
+                if (breachedMin)
                 {
-                    severityPercent = r.TestType.MinThreshold.Value == 0
+                    threshold = r.TestType.MinThreshold!.Value;
+                    severityPercent = threshold == 0
                         ? 100
-                        : Math.Round(Math.Abs(r.TestType.MinThreshold.Value - r.Value) / r.TestType.MinThreshold.Value * 100, 2);
+                        : Math.Round(Math.Abs(threshold - r.Value) / threshold * 100, 2);
                 }
                 else if (r.TestType.MaxThreshold is not null && r.Value > r.TestType.MaxThreshold)
                 {
-                    severityPercent = r.TestType.MaxThreshold.Value == 0
+                    threshold = r.TestType.MaxThreshold.Value;
+                    severityPercent = threshold == 0
                         ? 100
-                        : Math.Round(Math.Abs(r.Value - r.TestType.MaxThreshold.Value) / r.TestType.MaxThreshold.Value * 100, 2);
+                        : Math.Round(Math.Abs(r.Value - threshold) / threshold * 100, 2);
                 }
+
+                // Convert severity percent to 1-3 scale: >=20% → 3 (High), >=10% → 2 (Medium), else → 1 (Low)
+                int severity = severityPercent >= 20 ? 3 : severityPercent >= 10 ? 2 : 1;
 
                 return new
                 {
                     r.Id,
-                    r.TestTypeId,
                     TestTypeName = r.TestType.Name,
                     r.Value,
-                    Unit = r.TestType.Unit,
-                    r.TestType.MinThreshold,
-                    r.TestType.MaxThreshold,
-                    r.Status,
-                    SeverityPercent = severityPercent,
+                    Threshold = threshold,
+                    Severity = severity,
                     Longitude = r.Location.X,
                     Latitude = r.Location.Y,
                     r.Timestamp
                 };
             })
-            .OrderByDescending(x => x.SeverityPercent)
+            .OrderByDescending(x => x.Severity)
             .ToList();
 
         return Ok(outOfSpec);

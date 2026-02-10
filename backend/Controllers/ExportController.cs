@@ -175,9 +175,15 @@ public class ExportController : ControllerBase
             query = query.Where(x => x.TestTypeId == testTypeId.Value);
         }
 
-        if (!string.IsNullOrWhiteSpace(status) && Enum.TryParse<TestStatus>(status, ignoreCase: true, out var parsedStatus))
+        if (!string.IsNullOrWhiteSpace(status))
         {
-            query = query.Where(x => x.Status == parsedStatus);
+            var statusValues = status.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+                .Select(s => Enum.TryParse<TestStatus>(s, ignoreCase: true, out var v) ? v : (TestStatus?)null)
+                .Where(v => v != null)
+                .Select(v => v!.Value)
+                .ToList();
+            if (statusValues.Count > 0)
+                query = query.Where(x => statusValues.Contains(x.Status));
         }
 
         return query;
