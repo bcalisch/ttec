@@ -52,8 +52,10 @@ module containerEnv 'modules/container-apps-env.bicep' = {
 
 // Predictable FQDNs for cross-app configuration
 var envDomain = containerEnv.outputs.defaultDomain
-var apiFqdn = 'geoops-api.${envDomain}'
-var frontendFqdn = 'geoops-frontend.${envDomain}'
+var geoopsApiFqdn = 'geoops-api.${envDomain}'
+var geoopsFrontendFqdn = 'geoops-frontend.${envDomain}'
+var ticketingApiFqdn = 'ticketing-api.${envDomain}'
+var ticketingFrontendFqdn = 'ticketing-frontend.${envDomain}'
 
 // ─── GeoOps API ───
 module geoopsApi 'modules/container-app.bicep' = {
@@ -76,7 +78,7 @@ module geoopsApi 'modules/container-app.bicep' = {
       { name: 'Jwt__SigningKey', value: jwtSigningKey }
       { name: 'Jwt__Issuer', value: 'ttec-${environmentName}' }
       { name: 'Jwt__Audience', value: 'ttec-spa' }
-      { name: 'Cors__AllowedOrigins__0', value: 'https://${frontendFqdn}' }
+      { name: 'Cors__AllowedOrigins__0', value: 'https://${geoopsFrontendFqdn}' }
     ]
   }
 }
@@ -98,7 +100,79 @@ module geoopsFrontend 'modules/container-app.bicep' = {
     maxReplicas: 1
     envVars: [
       { name: 'API_URL', value: 'http://geoops-api' }
-      { name: 'PUBLIC_API_URL', value: 'https://${apiFqdn}' }
+      { name: 'PUBLIC_API_URL', value: 'https://${geoopsApiFqdn}' }
+      { name: 'TICKETING_APP_URL', value: 'https://${ticketingFrontendFqdn}' }
+    ]
+  }
+}
+
+// ─── Ticketing API ───
+module ticketingApi 'modules/container-app.bicep' = {
+  name: 'ticketing-api-deployment'
+  params: {
+    name: 'ticketing-api'
+    environmentId: containerEnv.outputs.environmentId
+    location: location
+    registryServer: acr.outputs.loginServer
+    registryUsername: acr.outputs.adminUsername
+    registryPassword: acr.outputs.adminPassword
+    imageName: 'ticketing-api'
+    imageTag: 'latest'
+    targetPort: 8080
+    minReplicas: 0
+    maxReplicas: 1
+    envVars: [
+      { name: 'ASPNETCORE_ENVIRONMENT', value: 'Production' }
+      { name: 'ConnectionStrings__Default', value: sqlConnectionString }
+      { name: 'Jwt__SigningKey', value: jwtSigningKey }
+      { name: 'Jwt__Issuer', value: 'ttec-${environmentName}' }
+      { name: 'Jwt__Audience', value: 'ttec-spa' }
+      { name: 'Cors__AllowedOrigins__0', value: 'https://${ticketingFrontendFqdn}' }
+    ]
+  }
+}
+
+// ─── Ticketing Frontend ───
+module ticketingFrontend 'modules/container-app.bicep' = {
+  name: 'ticketing-frontend-deployment'
+  params: {
+    name: 'ticketing-frontend'
+    environmentId: containerEnv.outputs.environmentId
+    location: location
+    registryServer: acr.outputs.loginServer
+    registryUsername: acr.outputs.adminUsername
+    registryPassword: acr.outputs.adminPassword
+    imageName: 'ticketing-frontend'
+    imageTag: 'latest'
+    targetPort: 80
+    minReplicas: 0
+    maxReplicas: 1
+    envVars: [
+      { name: 'BACKEND_HOST', value: 'ticketing-api' }
+      { name: 'PUBLIC_API_URL', value: 'https://${ticketingApiFqdn}' }
+      { name: 'GEOOPS_APP_URL', value: 'https://${geoopsFrontendFqdn}' }
+    ]
+  }
+}
+
+// ─── Landing Page ───
+module landing 'modules/container-app.bicep' = {
+  name: 'landing-deployment'
+  params: {
+    name: 'landing'
+    environmentId: containerEnv.outputs.environmentId
+    location: location
+    registryServer: acr.outputs.loginServer
+    registryUsername: acr.outputs.adminUsername
+    registryPassword: acr.outputs.adminPassword
+    imageName: 'landing'
+    imageTag: 'latest'
+    targetPort: 80
+    minReplicas: 0
+    maxReplicas: 1
+    envVars: [
+      { name: 'GEOOPS_URL', value: 'https://${geoopsFrontendFqdn}' }
+      { name: 'TICKETING_URL', value: 'https://${ticketingFrontendFqdn}' }
     ]
   }
 }
@@ -106,6 +180,9 @@ module geoopsFrontend 'modules/container-app.bicep' = {
 // ─── Outputs ───
 output acrLoginServer string = acr.outputs.loginServer
 output acrName string = acr.outputs.name
-output apiFqdn string = geoopsApi.outputs.fqdn
-output frontendFqdn string = geoopsFrontend.outputs.fqdn
+output geoopsApiFqdn string = geoopsApi.outputs.fqdn
+output geoopsFrontendFqdn string = geoopsFrontend.outputs.fqdn
+output ticketingApiFqdn string = ticketingApi.outputs.fqdn
+output ticketingFrontendFqdn string = ticketingFrontend.outputs.fqdn
+output landingFqdn string = landing.outputs.fqdn
 output sqlServerFqdn string = sql.outputs.serverFqdn
