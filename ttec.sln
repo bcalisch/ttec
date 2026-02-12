@@ -1,4 +1,4 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
@@ -10,6 +10,12 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GeoOps.Api", "apps\geoops\backend\GeoOps.Api.csproj", "{5E048D5A-8EDD-466D-A155-1DC15CF91E00}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GeoOps.Api.Tests", "apps\geoops\tests\GeoOps.Api.Tests.csproj", "{676A5733-ADF7-4A8C-A7A8-FA1D7216C747}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ticketing", "ticketing", "{B1C2D3E4-F5A6-4789-0ABC-DEF012345678}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ticketing.Api", "apps\ticketing\backend\Ticketing.Api.csproj", "{A1B2C3D4-E5F6-4789-0ABC-DEF012345679}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ticketing.Api.Tests", "apps\ticketing\tests\Ticketing.Api.Tests.csproj", "{A1B2C3D4-E5F6-4789-0ABC-DEF01234567A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -28,10 +34,21 @@ Global
 		{676A5733-ADF7-4A8C-A7A8-FA1D7216C747}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{676A5733-ADF7-4A8C-A7A8-FA1D7216C747}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{676A5733-ADF7-4A8C-A7A8-FA1D7216C747}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1B2C3D4-E5F6-4789-0ABC-DEF012345679}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1B2C3D4-E5F6-4789-0ABC-DEF012345679}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1B2C3D4-E5F6-4789-0ABC-DEF012345679}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1B2C3D4-E5F6-4789-0ABC-DEF012345679}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1B2C3D4-E5F6-4789-0ABC-DEF01234567A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1B2C3D4-E5F6-4789-0ABC-DEF01234567A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1B2C3D4-E5F6-4789-0ABC-DEF01234567A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1B2C3D4-E5F6-4789-0ABC-DEF01234567A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{E58F78D3-68AE-4B5B-99CE-27E9806EBC26} = {21A7F3E0-230A-4D8A-B742-0705B0BCEBF4}
 		{5E048D5A-8EDD-466D-A155-1DC15CF91E00} = {E58F78D3-68AE-4B5B-99CE-27E9806EBC26}
 		{676A5733-ADF7-4A8C-A7A8-FA1D7216C747} = {E58F78D3-68AE-4B5B-99CE-27E9806EBC26}
+		{B1C2D3E4-F5A6-4789-0ABC-DEF012345678} = {21A7F3E0-230A-4D8A-B742-0705B0BCEBF4}
+		{A1B2C3D4-E5F6-4789-0ABC-DEF012345679} = {B1C2D3E4-F5A6-4789-0ABC-DEF012345678}
+		{A1B2C3D4-E5F6-4789-0ABC-DEF01234567A} = {B1C2D3E4-F5A6-4789-0ABC-DEF012345678}
 	EndGlobalSection
 EndGlobal
