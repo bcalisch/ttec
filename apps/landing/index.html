@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TTEC Platform</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    // Runtime config — overwritten by Docker entrypoint in production
+    window.__LANDING_CONFIG__ = {
+      geoopsUrl: '',
+      ticketingUrl: ''
+    };
+  </script>
+  <script src="config.js"></script>
+</head>
+<body class="bg-gray-950 text-white min-h-screen flex flex-col">
+  <!-- Nav -->
+  <header class="border-b border-gray-800">
+    <div class="max-w-5xl mx-auto px-6 py-4">
+      <h1 class="text-xl font-bold tracking-tight">TTEC Platform</h1>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <main class="flex-1 flex items-center justify-center px-6">
+    <div class="max-w-4xl w-full">
+      <div class="text-center mb-12">
+        <h2 class="text-4xl font-bold mb-3">Intelligent Construction Technology</h2>
+        <p class="text-lg text-gray-400 max-w-2xl mx-auto">
+          IC and PMTP tools for geotechnical data management, equipment tracking, support ticketing, and field operations.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- GeoOps Card -->
+        <a id="geoops-link" href="#"
+          class="group block p-8 bg-gray-900 border border-gray-800 rounded-2xl hover:border-blue-500 hover:bg-gray-900/80 transition-all duration-200">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center">
+              <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+              </svg>
+            </div>
+            <h3 class="text-xl font-semibold">GeoOps</h3>
+          </div>
+          <p class="text-gray-400 mb-4">
+            Geotechnical data management platform. Map-based project dashboards, test result tracking, CSV ingest, coverage analysis, and boundary management.
+          </p>
+          <div class="flex flex-wrap gap-2">
+            <span class="text-xs px-2.5 py-1 rounded-full bg-blue-950 text-blue-400 border border-blue-900">Projects</span>
+            <span class="text-xs px-2.5 py-1 rounded-full bg-blue-950 text-blue-400 border border-blue-900">Test Results</span>
+            <span class="text-xs px-2.5 py-1 rounded-full bg-blue-950 text-blue-400 border border-blue-900">Maps</span>
+            <span class="text-xs px-2.5 py-1 rounded-full bg-blue-950 text-blue-400 border border-blue-900">Coverage</span>
+          </div>
+          <div class="mt-4 text-sm text-blue-400 group-hover:text-blue-300 flex items-center gap-1">
+            Open GeoOps
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
+        </a>
+
+        <!-- Ticketing Card -->
+        <a id="ticketing-link" href="#"
+          class="group block p-8 bg-gray-900 border border-gray-800 rounded-2xl hover:border-orange-500 hover:bg-gray-900/80 transition-all duration-200">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-10 h-10 rounded-lg bg-orange-600 flex items-center justify-center">
+              <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+            </div>
+            <h3 class="text-xl font-semibold">Ticketing</h3>
+          </div>
+          <p class="text-gray-400 mb-4">
+            IC/PMTP support ticket system. Track equipment issues, calibration schedules, field support, time &amp; billing, SLA enforcement, and knowledge base.
+          </p>
+          <div class="flex flex-wrap gap-2">
+            <span class="text-xs px-2.5 py-1 rounded-full bg-orange-950 text-orange-400 border border-orange-900">Tickets</span>
+            <span class="text-xs px-2.5 py-1 rounded-full bg-orange-950 text-orange-400 border border-orange-900">Equipment</span>
+            <span class="text-xs px-2.5 py-1 rounded-full bg-orange-950 text-orange-400 border border-orange-900">Billing</span>
+            <span class="text-xs px-2.5 py-1 rounded-full bg-orange-950 text-orange-400 border border-orange-900">SLA</span>
+          </div>
+          <div class="mt-4 text-sm text-orange-400 group-hover:text-orange-300 flex items-center gap-1">
+            Open Ticketing
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
+        </a>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-gray-800 py-6">
+    <div class="max-w-5xl mx-auto px-6 flex items-center justify-between text-sm text-gray-500">
+      <span>TTEC &mdash; Technology for Engineered Construction</span>
+      <span>Shared authentication across all services</span>
+    </div>
+  </footer>
+
+  <script>
+    (function() {
+      var cfg = window.__LANDING_CONFIG__ || {};
+      var geoopsUrl = cfg.geoopsUrl || 'http://localhost:80';
+      var ticketingUrl = cfg.ticketingUrl || 'http://localhost:81';
+      document.getElementById('geoops-link').href = geoopsUrl;
+      document.getElementById('ticketing-link').href = ticketingUrl;
+    })();
+  </script>
+</body>
+</html>

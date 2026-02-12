@@ -30,10 +30,15 @@ services:
         condition: service_healthy
 
   frontend:
-    image: nginx:alpine
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
     container_name: ticketing-frontend
     ports:
       - "81:80"
+    environment:
+      BACKEND_HOST: api
+      PUBLIC_API_URL: ""
     depends_on:
       - api
 

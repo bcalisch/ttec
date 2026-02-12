@@ -17,6 +17,7 @@ Standalone service for tracking support tickets, equipment issues, calibration s
 
 | Layer | Technology |
 |-------|-----------|
+| Frontend | Angular 19, Tailwind CSS, Chart.js, Leaflet |
 | Backend | .NET 8 Web API, Entity Framework Core, NetTopologySuite |
 | Database | SQL Server (`ticketing` schema), geography columns for location |
 | Auth | JWT Bearer (shared `ttec-dev` issuer across platform) |
@@ -59,18 +60,36 @@ Standalone service for tracking support tickets, equipment issues, calibration s
 | EquipmentType | Roller, Paver, MillingMachine, Sensor, Software, Other |
 | EquipmentManufacturer | BOMAG, CAT, HAMM, Volvo, Dynapac, Other |
 
+## Frontend Pages
+
+| Page | Description |
+|------|-------------|
+| `/login` | Shared auth login (same credentials as GeoOps) |
+| `/tickets` | Ticket list with status/priority filters, overdue highlighting |
+| `/tickets/new` | Create ticket form, accepts `?sourceApp=&sourceType=&sourceId=` query params |
+| `/tickets/:id` | Ticket detail with comments, time entries, billing sidebar, location map |
+| `/equipment` | Equipment registry with CRUD, type/manufacturer badges |
+| `/knowledge-base` | Article list with tag filtering, expand/collapse, publish workflow |
+| `/dashboard` | SLA dashboard with Chart.js doughnut/bar charts, billing summary |
+
 ## Running Locally
 
 ```bash
-# Full stack via Docker (SQL Server + API + nginx placeholder)
+# Full stack via Docker (SQL Server + API + Frontend)
 cd apps/ticketing
 docker compose up --build
+# Frontend: http://localhost:81
 # API: http://localhost:8081
 
 # Backend only
 cd apps/ticketing/backend
 dotnet run
 # https://localhost:7044
+
+# Frontend only (dev server with proxy)
+cd apps/ticketing/frontend
+npm start
+# http://localhost:4200
 
 # Tests (46 integration tests)
 dotnet test apps/ticketing/tests/Ticketing.Api.Tests.csproj
