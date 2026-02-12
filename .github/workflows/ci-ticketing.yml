@@ -32,9 +32,26 @@ jobs:
       - name: Test
         run: dotnet test apps/ticketing/tests/Ticketing.Api.Tests.csproj --configuration Release --no-build --verbosity normal
 
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: apps/ticketing/frontend/package-lock.json
+      - name: Install
+        run: npm ci
+        working-directory: apps/ticketing/frontend
+      - name: Build
+        run: npx ng build --configuration=production
+        working-directory: apps/ticketing/frontend
+
   deploy:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [backend]
+    needs: [backend, frontend]
     runs-on: ubuntu-latest
     environment: production
     steps:

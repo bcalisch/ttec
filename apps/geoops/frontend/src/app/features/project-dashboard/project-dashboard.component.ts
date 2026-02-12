@@ -58,6 +58,18 @@ import { AddSensorFormComponent } from '../add-sensor-form/add-sensor-form.compo
               class="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700">
               Upload CSV
             </button>
+            @if (ticketingUrl) {
+              <a [href]="ticketingUrl + '/tickets/new?sourceApp=geoops&sourceType=project&sourceId=' + project.id"
+                target="_blank"
+                class="px-3 py-1.5 text-sm border border-orange-300 text-orange-600 rounded-md hover:bg-orange-50">
+                Create Ticket
+              </a>
+              <a [href]="ticketingUrl + '/tickets?sourceApp=geoops&sourceEntityId=' + project.id"
+                target="_blank"
+                class="px-3 py-1.5 text-sm border border-gray-300 rounded-md hover:bg-gray-50">
+                View Tickets
+              </a>
+            }
           </div>
         </div>
 
@@ -226,6 +238,7 @@ export class ProjectDashboardComponent implements OnInit, OnDestroy, AfterViewIn
   coverageCells: CoverageCell[] = [];
   showCoverageGrid = false;
   showCsvUpload = false;
+  ticketingUrl = ((window as any).__APP_CONFIG__?.ticketingAppUrl as string) || '';
   showAddTest = false;
   showAddObservation = false;
   showAddSensor = false;

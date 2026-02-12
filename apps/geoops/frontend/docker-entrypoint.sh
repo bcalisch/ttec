@@ -5,6 +5,7 @@
 cat > /usr/share/nginx/html/browser/assets/config.js << JSEOF
 window.__APP_CONFIG__ = {
   apiBaseUrl: '${PUBLIC_API_URL:-}',
+  ticketingAppUrl: '${TICKETING_APP_URL:-}',
 };
 JSEOF
 
