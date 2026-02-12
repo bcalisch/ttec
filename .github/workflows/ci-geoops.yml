@@ -1,0 +1,53 @@
+name: CI - GeoOps
+
+on:
+  push:
+    branches: [master, main]
+    paths:
+      - 'apps/geoops/**'
+      - 'libs/shared/**'
+  pull_request:
+    branches: [master, main]
+    paths:
+      - 'apps/geoops/**'
+      - 'libs/shared/**'
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Restore
+        run: |
+          dotnet restore apps/geoops/backend/GeoOps.Api.csproj
+          dotnet restore apps/geoops/tests/GeoOps.Api.Tests.csproj
+      - name: Build
+        run: |
+          dotnet build apps/geoops/backend/GeoOps.Api.csproj --configuration Release --no-restore
+          dotnet build apps/geoops/tests/GeoOps.Api.Tests.csproj --configuration Release --no-restore
+      - name: Test
+        run: dotnet test apps/geoops/tests/GeoOps.Api.Tests.csproj --configuration Release --no-build --verbosity normal
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: apps/geoops/frontend/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+        working-directory: apps/geoops/frontend
+      - name: Build
+        run: npx ng build --configuration=production
+        working-directory: apps/geoops/frontend
+      - name: Test
+        run: npx ng test --watch=false --browsers=ChromeHeadless
+        working-directory: apps/geoops/frontend

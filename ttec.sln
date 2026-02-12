@@ -1,0 +1,37 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "apps", "apps", "{21A7F3E0-230A-4D8A-B742-0705B0BCEBF4}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "geoops", "geoops", "{E58F78D3-68AE-4B5B-99CE-27E9806EBC26}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GeoOps.Api", "apps\geoops\backend\GeoOps.Api.csproj", "{5E048D5A-8EDD-466D-A155-1DC15CF91E00}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GeoOps.Api.Tests", "apps\geoops\tests\GeoOps.Api.Tests.csproj", "{676A5733-ADF7-4A8C-A7A8-FA1D7216C747}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5E048D5A-8EDD-466D-A155-1DC15CF91E00}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5E048D5A-8EDD-466D-A155-1DC15CF91E00}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5E048D5A-8EDD-466D-A155-1DC15CF91E00}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5E048D5A-8EDD-466D-A155-1DC15CF91E00}.Release|Any CPU.Build.0 = Release|Any CPU
+		{676A5733-ADF7-4A8C-A7A8-FA1D7216C747}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{676A5733-ADF7-4A8C-A7A8-FA1D7216C747}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{676A5733-ADF7-4A8C-A7A8-FA1D7216C747}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{676A5733-ADF7-4A8C-A7A8-FA1D7216C747}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{E58F78D3-68AE-4B5B-99CE-27E9806EBC26} = {21A7F3E0-230A-4D8A-B742-0705B0BCEBF4}
+		{5E048D5A-8EDD-466D-A155-1DC15CF91E00} = {E58F78D3-68AE-4B5B-99CE-27E9806EBC26}
+		{676A5733-ADF7-4A8C-A7A8-FA1D7216C747} = {E58F78D3-68AE-4B5B-99CE-27E9806EBC26}
+	EndGlobalSection
+EndGlobal
